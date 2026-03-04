@@ -16,17 +16,20 @@
 ## 📑 Table of Contents
 
 - [Overview](#-overview)
-- [Features](#-features)
 - [Architecture](#️-architecture)
-- [Design Patterns](#-design-patterns)
+  - [Core Components](#core-components)
+  - [Design Patterns](#design-patterns-implemented)
+  - [Class Diagram](#class-diagram)
+- [Features](#-features)
+- [Usage Examples](#-usage-examples)
+- [Documentation](#-documentation)
+- [Technical Implementation](#-technical-implementation)
 - [SOLID Principles](#-solid-principles)
 - [Getting Started](#-getting-started)
-- [Usage Examples](#-usage-examples)
 - [Project Structure](#-project-structure)
-- [Logging](#-logging)
-- [Documentation](#-documentation)
-- [Technical Details](#-technical-details)
+- [Testing](#-testing)
 - [Learning Outcomes](#-learning-outcomes)
+- [Future Enhancements](#-future-enhancements)
 
 ---
 
@@ -75,6 +78,222 @@ The system uses a **layered architecture** with clear separation of concerns:
 2. **Observer Pattern**: Book availability notifications via `BookObserver`
 3. **Strategy Pattern**: Pluggable recommendation algorithms via `RecommendationStrategy`
 4. **Factory Pattern**: Object creation through `LibraryFactory`
+
+### Class Diagram
+
+```mermaid
+classDiagram
+    %% Entity Layer
+    class Book {
+        -String isbn
+        -String title
+        -String author
+        -int publicationYear
+        +getIsbn() String
+        +getTitle() String
+        +getAuthor() String
+        +getPublicationYear() int
+    }
+    
+    class Patron {
+        -int id
+        -String name
+        -List~String~ borrowingHistory
+        +getId() int
+        +getName() String
+        +addToBorrowingHistory(String isbn)
+        +getBorrowingHistory() List~String~
+    }
+    
+    class Loan {
+        -Book book
+        -Patron patron
+        -LocalDate checkoutDate
+        -LocalDate returnDate
+        +getBook() Book
+        +getPatron() Patron
+        +getCheckoutDate() LocalDate
+        +getReturnDate() LocalDate
+        +isReturned() boolean
+    }
+    
+    class Branch {
+        -String id
+        -String name
+        -String address
+        -String phoneNumber
+        +getId() String
+        +getName() String
+        +getAddress() String
+        +getPhoneNumber() String
+    }
+    
+    class BookTransfer {
+        -String transferId
+        -String fromBranch
+        -String toBranch
+        -String isbn
+        -int quantity
+        -LocalDateTime initiatedDate
+        -TransferStatus status
+        +getTransferId() String
+        +getStatus() TransferStatus
+        +completeTransfer()
+        +cancelTransfer()
+    }
+    
+    %% Service Layer - Managers
+    class InventoryManager {
+        -Map~String,Book~ bookCatalog
+        +addBook(Book book)
+        +removeBook(String isbn) boolean
+        +getBook(String isbn) Book
+        +searchByTitle(String title) List~Book~
+        +searchByAuthor(String author) List~Book~
+        +listAllBooks() List~Book~
+    }
+    
+    class PatronManager {
+        -Map~Integer,Patron~ patrons
+        +addPatron(Patron patron)
+        +getPatron(int id) Patron
+        +removePatron(int id) boolean
+        +listAllPatrons() List~Patron~
+    }
+    
+    class LoanManager {
+        -List~Loan~ loans
+        -InventoryManager inventoryManager
+        -PatronManager patronManager
+        +checkoutBook(String isbn, int patronId) boolean
+        +returnBook(String isbn, int patronId) boolean
+        +getActiveLoans() List~Loan~
+        +getLoansByPatron(int patronId) List~Loan~
+    }
+    
+    class BranchInventory {
+        -String branchId
+        -Map~String,Integer~ bookCopies
+        +addBooks(String isbn, int quantity)
+        +removeBooks(String isbn, int quantity) boolean
+        +getAvailableCount(String isbn) int
+        +transferOut(String isbn, int quantity) boolean
+        +transferIn(String isbn, int quantity)
+    }
+    
+    class BranchManager {
+        -Map~String,Branch~ branches
+        -Map~String,BranchInventory~ inventories
+        -List~BookTransfer~ transfers
+        +createBranch(Branch branch)
+        +getBranch(String id) Branch
+        +addBookToBranch(String branchId, String isbn, int quantity)
+        +transferBook(String from, String to, String isbn, int qty, String reason)
+        +getBookAvailability(String branchId, String isbn) int
+        +listAllBranches() List~Branch~
+    }
+    
+    class ReservationManager {
+        -Map~String,Queue~Integer~~ reservations
+        +reserveBook(String isbn, int patronId)
+        +cancelReservation(String isbn, int patronId)
+        +notifyPatron(String isbn)
+    }
+    
+    class LibraryService {
+        -InventoryManager inventoryManager
+        -PatronManager patronManager
+        -LoanManager loanManager
+        -BranchManager branchManager
+        -ReservationManager reservationManager
+        -RecommendationStrategy recommendationStrategy
+        +addBook(...) 
+        +addPatron(...)
+        +checkoutBook(...)
+        +returnBook(...)
+        +createBranch(...)
+        +transferBook(...)
+        +reserveBook(...)
+        +getRecommendations(...) List~Book~
+    }
+    
+    %% Pattern Interfaces and Implementations
+    class BookObserver {
+        <<interface>>
+        +update(String isbn)
+    }
+    
+    class RecommendationStrategy {
+        <<interface>>
+        +recommend(Patron patron, List~Book~ catalog) List~Book~
+    }
+    
+    class BasicRecommendationStrategy {
+        +recommend(Patron patron, List~Book~ catalog) List~Book~
+    }
+    
+    class LibraryFactory {
+        <<factory>>
+        +createLibrary() LibraryService
+        +createBook(...) Book
+        +createPatron(...) Patron
+        +createBranch(...) Branch
+    }
+    
+    %% Relationships
+    LibraryService *-- InventoryManager : contains
+    LibraryService *-- PatronManager : contains
+    LibraryService *-- LoanManager : contains
+    LibraryService *-- BranchManager : contains
+    LibraryService *-- ReservationManager : contains
+    LibraryService o-- RecommendationStrategy : uses
+    
+    InventoryManager o-- Book : manages
+    PatronManager o-- Patron : manages
+    LoanManager o-- Loan : manages
+    LoanManager --> InventoryManager : depends on
+    LoanManager --> PatronManager : depends on
+    
+    BranchManager o-- Branch : manages
+    BranchManager *-- BranchInventory : contains
+    BranchManager o-- BookTransfer : manages
+    BranchInventory --> Book : tracks copies
+    
+    Loan --> Book : references
+    Loan --> Patron : references
+    BookTransfer --> Branch : from/to
+    
+    ReservationManager ..|> BookObserver : implements
+    BasicRecommendationStrategy ..|> RecommendationStrategy : implements
+    
+    LibraryFactory ..> LibraryService : creates
+    LibraryFactory ..> Book : creates
+    LibraryFactory ..> Patron : creates
+    LibraryFactory ..> Branch : creates
+    
+    %% Styling
+    style LibraryService fill:#e1f5ff
+    style InventoryManager fill:#fff4e1
+    style PatronManager fill:#fff4e1
+    style LoanManager fill:#fff4e1
+    style BranchManager fill:#fff4e1
+    style ReservationManager fill:#fff4e1
+    style BookObserver fill:#e8f5e9
+    style RecommendationStrategy fill:#e8f5e9
+```
+
+**Legend:**
+- 🔵 **Blue** - Facade (Main entry point)
+- 🟡 **Yellow** - Manager classes (Service layer)
+- 🟢 **Green** - Interfaces (Abstraction layer)
+- ⚪ **White** - Entities and implementations
+
+**Relationship Types:**
+- `*--` Composition (lifetime dependency)
+- `o--` Aggregation (has-a relationship)
+- `-->` Dependency (uses)
+- `..|>` Interface implementation
+- `..>` Creation dependency
 
 ## ✨ Features
 
