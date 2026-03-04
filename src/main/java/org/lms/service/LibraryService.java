@@ -1,6 +1,8 @@
 package org.lms.service;
 
 import org.lms.entity.Book;
+import org.lms.entity.BookTransfer;
+import org.lms.entity.Branch;
 import org.lms.entity.Loan;
 import org.lms.entity.Patron;
 import org.lms.observer.BookObserver;
@@ -23,6 +25,7 @@ public class LibraryService {
     private final PatronManager patronManager;
     private final LoanManager loanManager;
     private final ReservationManager reservationManager;
+    private final BranchManager branchManager;
     private RecommendationStrategy recommendationStrategy;
 
     public LibraryService() {
@@ -30,17 +33,20 @@ public class LibraryService {
         this.patronManager = new PatronManager();
         this.reservationManager = new ReservationManager();
         this.loanManager = new LoanManager(inventoryManager, reservationManager);
+        this.branchManager = new BranchManager(inventoryManager);
     }
 
     // Constructor for dependency injection (Open/Closed Principle)
     public LibraryService(InventoryManager inventoryManager, 
                          PatronManager patronManager,
                          LoanManager loanManager,
-                         ReservationManager reservationManager) {
+                         ReservationManager reservationManager,
+                         BranchManager branchManager) {
         this.inventoryManager = inventoryManager;
         this.patronManager = patronManager;
         this.loanManager = loanManager;
         this.reservationManager = reservationManager;
+        this.branchManager = branchManager;
     }
 
     public void setRecommendationStrategy(RecommendationStrategy strategy) {
@@ -165,5 +171,71 @@ public class LibraryService {
 
     public ReservationManager getReservationManager() {
         return reservationManager;
+    }
+
+    public BranchManager getBranchManager() {
+        return branchManager;
+    }
+
+    // ========== Multi-Branch Support (Delegates to BranchManager) ==========
+    
+    public void addBranch(Branch branch) {
+        branchManager.addBranch(branch);
+    }
+
+    public boolean removeBranch(String branchId) {
+        return branchManager.removeBranch(branchId);
+    }
+
+    public void updateBranch(Branch branch) {
+        branchManager.updateBranch(branch);
+    }
+
+    public Optional<Branch> findBranchById(String branchId) {
+        return branchManager.findBranchById(branchId);
+    }
+
+    public List<Branch> getAllBranches() {
+        return branchManager.getAllBranches();
+    }
+
+    public void addBookToBranch(String branchId, String isbn, int copies) {
+        branchManager.addBookToBranch(branchId, isbn, copies);
+    }
+
+    public boolean removeBookFromBranch(String branchId, String isbn, int copies) {
+        return branchManager.removeBookFromBranch(branchId, isbn, copies);
+    }
+
+    public int getBookCountAtBranch(String branchId, String isbn) {
+        return branchManager.getBookCountAtBranch(branchId, isbn);
+    }
+
+    public boolean isBookAvailableAtBranch(String branchId, String isbn) {
+        return branchManager.isBookAvailableAtBranch(branchId, isbn);
+    }
+
+    public List<Branch> findBranchesWithBook(String isbn) {
+        return branchManager.findBranchesWithBook(isbn);
+    }
+
+    public Optional<String> transferBook(String isbn, String fromBranchId, String toBranchId) {
+        return branchManager.transferBook(isbn, fromBranchId, toBranchId);
+    }
+
+    public Optional<BookTransfer> getTransfer(String transferId) {
+        return branchManager.getTransfer(transferId);
+    }
+
+    public List<BookTransfer> getAllTransfers() {
+        return branchManager.getAllTransfers();
+    }
+
+    public List<BookTransfer> getTransfersForBranch(String branchId) {
+        return branchManager.getTransfersForBranch(branchId);
+    }
+
+    public int getTotalCopiesAcrossAllBranches(String isbn) {
+        return branchManager.getTotalCopiesAcrossAllBranches(isbn);
     }
 }

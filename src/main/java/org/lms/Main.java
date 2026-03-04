@@ -1,6 +1,7 @@
 package org.lms;
 
 import org.lms.entity.Book;
+import org.lms.entity.Branch;
 import org.lms.entity.Patron;
 import org.lms.factory.LibraryFactory;
 import org.lms.observer.BookObserver;
@@ -61,8 +62,61 @@ public class Main {
         // Recommendations for p1 (simple): based on borrow history
         logger.info("Recommendations for p1: {}", libraryService.recommendedBooks(p1.getId()));
 
-        logger.info("Demo complete.");
+        logger.info("=== Basic Demo complete. ===\n");
 
+        // ========== Multi-Branch Support Demo ==========
+        logger.info("=== Multi-Branch Support Demo ===");
+
+        // Create branches
+        Branch downtown = LibraryFactory.createBranch("BRANCH-001", "Downtown Branch", 
+                "123 Main St, Downtown", "555-0101");
+        Branch uptown = LibraryFactory.createBranch("BRANCH-002", "Uptown Branch", 
+                "456 High St, Uptown", "555-0102");
+        Branch westside = LibraryFactory.createBranch("BRANCH-003", "Westside Branch", 
+                "789 West Ave, Westside", "555-0103");
+
+        libraryService.addBranch(downtown);
+        libraryService.addBranch(uptown);
+        libraryService.addBranch(westside);
+
+        logger.info("Total branches: {}", libraryService.getAllBranches().size());
+
+        // Add book copies to branches
+        libraryService.addBookToBranch("BRANCH-001", b1.getIsbn(), 5); // 5 copies at Downtown
+        libraryService.addBookToBranch("BRANCH-001", b2.getIsbn(), 3); // 3 copies at Downtown
+        libraryService.addBookToBranch("BRANCH-002", b1.getIsbn(), 2); // 2 copies at Uptown
+        libraryService.addBookToBranch("BRANCH-002", b3.getIsbn(), 4); // 4 copies at Uptown
+        libraryService.addBookToBranch("BRANCH-003", b2.getIsbn(), 6); // 6 copies at Westside
+
+        // Check availability at branches
+        logger.info("Effective Java copies at Downtown: {}", 
+                libraryService.getBookCountAtBranch("BRANCH-001", b1.getIsbn()));
+        logger.info("Effective Java copies at Uptown: {}", 
+                libraryService.getBookCountAtBranch("BRANCH-002", b1.getIsbn()));
+        logger.info("Effective Java total across all branches: {}", 
+                libraryService.getTotalCopiesAcrossAllBranches(b1.getIsbn()));
+
+        // Find branches with a specific book
+        logger.info("Branches with 'Head First Java': {}", 
+                libraryService.findBranchesWithBook(b2.getIsbn()));
+
+        // Transfer book between branches
+        logger.info("Transferring 'Effective Java' from Downtown to Westside...");
+        libraryService.transferBook(b1.getIsbn(), "BRANCH-001", "BRANCH-003")
+                .ifPresentOrElse(
+                    transferId -> logger.info("Transfer successful! Transfer ID: {}", transferId),
+                    () -> logger.warn("Transfer failed!")
+                );
+
+        // Check updated counts after transfer
+        logger.info("After transfer - Downtown has {} copies, Westside has {} copies",
+                libraryService.getBookCountAtBranch("BRANCH-001", b1.getIsbn()),
+                libraryService.getBookCountAtBranch("BRANCH-003", b1.getIsbn()));
+
+        // View all transfers
+        logger.info("Total transfers: {}", libraryService.getAllTransfers().size());
+
+        logger.info("=== Multi-Branch Demo complete! ===");
 
 
     }
