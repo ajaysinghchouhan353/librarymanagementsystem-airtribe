@@ -6,14 +6,13 @@ import org.lms.factory.LibraryFactory;
 import org.lms.observer.BookObserver;
 import org.lms.recommendation.BasicRecommendationStrategy;
 import org.lms.service.LibraryService;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
     public static void main(String[] args) {
-        Logger logger = Logger.getLogger("");
-        logger.setLevel(Level.INFO);;
 
         LibraryService libraryService = new LibraryService();
         libraryService.setRecommendationStrategy(new BasicRecommendationStrategy());
@@ -47,12 +46,12 @@ public class Main {
         libraryService.reserveBook(b1.getIsbn(), new BookObserver() {
             @Override
             public void onBookAvailable(Book book) {
-                logger.info("P2 notified: Book is now available: " + book);
+                logger.info("P2 notified: Book is now available: {}", book);
                 boolean checkedOut = libraryService.checkoutBook(book.getIsbn(), p2.getId());
                 if(checkedOut) {
-                    logger.info("P2 successfully checked out the book: " + book);
+                    logger.info("P2 successfully checked out the book: {}", book);
                 } else {
-                    logger.info("P2 failed to checkout the book: " + book);
+                    logger.info("P2 failed to checkout the book: {}", book);
                 }
             }
         });
@@ -60,7 +59,7 @@ public class Main {
         //Return Book and trigger Notification
         libraryService.returnBook(b1.getIsbn());
         // Recommendations for p1 (simple): based on borrow history
-        logger.info("Recommendations for p1: " + libraryService.recommendedBooks(p1.getId()));
+        logger.info("Recommendations for p1: {}", libraryService.recommendedBooks(p1.getId()));
 
         logger.info("Demo complete.");
 

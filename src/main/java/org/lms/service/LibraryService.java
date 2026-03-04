@@ -6,14 +6,15 @@ import org.lms.entity.Patron;
 import org.lms.observer.BookObserver;
 import org.lms.observer.ReservationManager;
 import org.lms.recommendation.RecommendationStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class LibraryService {
-    private static final Logger log = Logger.getLogger(LibraryService.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(LibraryService.class);
 
     private final Map<String, Book> inventory = new HashMap<>(); //isbn -> Book
     private final Map<String, Patron> patrons = new HashMap<>(); //patronId -> Patron
@@ -31,17 +32,17 @@ public class LibraryService {
     //Book Management
    public synchronized void addBook(Book book) {
         inventory.put(book.getIsbn(), book);
-        log.info(() -> "Book added: " + book);
+        log.info("Book added: {}", book);
    }
 
    public synchronized  void removeBook(String isbn) {
         inventory.remove(isbn);
-        log.info(() -> "Book removed: " + isbn);
+        log.info("Book removed: {}", isbn);
    }
 
    public synchronized  void updateBook(Book book) {
         inventory.put(book.getIsbn(), book);
-        log.info(() -> "Book updated: " + book);
+        log.info("Book updated: {}", book);
    }
 
    public Optional<Book> findByIsbn(String isbn) {
@@ -61,17 +62,17 @@ public class LibraryService {
    //Patron Management
     public synchronized void addPatron(Patron patron) {
         patrons.put(patron.getId(), patron);
-        log.info(() -> "Patron added: " + patron);
+        log.info("Patron added: {}", patron);
     }
 
     public synchronized void removePatron(Patron patron) {
         patrons.remove(patron.getId());
-        log.info(() -> "Patron removed: " + patron);
+        log.info("Patron removed: {}", patron);
     }
 
     public synchronized void updatePatron(Patron patron) {
         patrons.put(patron.getId(), patron);
-        log.info(() -> "Patron updated: " + patron);
+        log.info("Patron updated: {}", patron);
     }
 
     public Optional<Patron> findPatronById(String id) {
@@ -81,15 +82,15 @@ public class LibraryService {
     //Lending Process
     public synchronized boolean checkoutBook(String isbn, String patronId) {
         if(!inventory.containsKey(isbn)) {
-            log.warning(() -> "Checkout failed: Book not found - " + isbn);
+            log.warn("Checkout failed: Book not found - {}", isbn);
             return false;
         }
         if(activeLoans.containsKey(isbn)) {
-            log.warning(() -> "Checkout failed: Book already loaned - " + isbn);
+            log.warn("Checkout failed: Book already loaned - {}", isbn);
             return false;
         }
         if(!patrons.containsKey(patronId)) {
-            log.warning(() -> "Checkout failed: Patron not found - " + patronId);
+            log.warn("Checkout failed: Patron not found - {}", patronId);
             return false;
         }
         Patron patron = patrons.get(patronId);
@@ -97,25 +98,25 @@ public class LibraryService {
         activeLoans.put(isbn, loan);
         loanHistory.add(loan);
         patron.recordBorrowedBook(isbn);
-        log.info(() -> String.format("Book checked out: %s to %s", isbn, patron.getName()));
+        log.info("Book checked out: {} to {}", isbn, patron.getName());
         return true;
     }
 
     public synchronized boolean returnBook(String isbn) {
         Loan loan = activeLoans.remove(isbn);
         if(loan == null) {
-            log.warning(() -> "Return failed: Book not currently loaned - " + isbn);
+            log.warn("Return failed: Book not currently loaned - {}", isbn);
             return false;
         }
         loan.markReturned();
-        log.info(() -> "Book returned: " + isbn);
+        log.info("Book returned: {}", isbn);
         reservationManager.notifyBookAvailable(inventory.get(isbn));
         return true;
     }
 
     public synchronized void reserveBook(String isbn, BookObserver observer) {
         if(!inventory.containsKey(isbn)) {
-            log.warning(() -> "Reservation failed: Book not found - " + isbn);
+            log.warn("Reservation failed: Book not found - {}", isbn);
             return;
         }
         reservationManager.reserveBook(isbn, observer);
@@ -123,12 +124,12 @@ public class LibraryService {
 
     public List<Book> recommendedBooks(String patronId) {
         if(recommendationStrategy == null) {
-            log.warning("No recommendation strategy set");
+            log.warn("No recommendation strategy set");
             return Collections.emptyList();
         }
         Patron patron = patrons.get(patronId);
         if(patron == null) {
-            log.warning(() -> "Recommendation failed: Patron not found - " + patronId);
+            log.warn("Recommendation failed: Patron not found - {}", patronId);
             return Collections.emptyList();
         }
         return recommendationStrategy.recommendBooks(patronId, patron.getBorrowedBooksHistory(), getAllBooks());
