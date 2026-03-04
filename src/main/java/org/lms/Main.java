@@ -7,7 +7,6 @@ import org.lms.observer.BookObserver;
 import org.lms.recommendation.BasicRecommendationStrategy;
 import org.lms.service.LibraryService;
 
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

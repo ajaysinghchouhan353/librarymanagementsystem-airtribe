@@ -109,6 +109,7 @@ public class LibraryService {
         }
         loan.markReturned();
         log.info(() -> "Book returned: " + isbn);
+        reservationManager.notifyBookAvailable(inventory.get(isbn));
         return true;
     }
 

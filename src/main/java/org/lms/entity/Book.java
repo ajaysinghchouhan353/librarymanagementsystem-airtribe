@@ -58,6 +58,6 @@ public class Book {
 
     @Override
     public String toString() {
-        return String.format("Book{isbn='%s', title='%s', author='%s', publicationYear=%b}", isbn, title, author, publicationYear);
+        return String.format("Book{isbn='%s', title='%s', author='%s', publicationYear=%d}", isbn, title, author, publicationYear);
     }
 }
