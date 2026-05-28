@@ -6,13 +6,19 @@ import java.util.Objects;
 public class Loan {
     private final String isbn;
     private final String patronId;
+    private final String branchId;
     private final LocalDate loanDate;
     private LocalDate returnDate;
 
     public Loan(String isbn, String patronId, LocalDate loanDate) {
+        this(isbn, patronId, loanDate, null);
+    }
+
+    public Loan(String isbn, String patronId, LocalDate loanDate, String branchId) {
         this.isbn = Objects.requireNonNull(isbn, "ISBN cannot be null");
         this.patronId = Objects.requireNonNull(patronId, "Patron ID cannot be null");
         this.loanDate = loanDate;
+        this.branchId = branchId;
     }
 
     public String getIsbn() {
@@ -21,6 +27,10 @@ public class Loan {
 
     public String getPatronId() {
         return patronId;
+    }
+
+    public String getBranchId() {
+        return branchId;
     }
 
     public LocalDate getLoanDate() {
@@ -36,8 +46,8 @@ public class Loan {
     }
 
     public String toString() {
-        return String.format("Loan[ISBN=%s, PatronID=%s, LoanDate=%s, ReturnDate=%s]",
-            isbn, patronId, loanDate, returnDate);
+        return String.format("Loan[ISBN=%s, PatronID=%s, BranchID=%s, LoanDate=%s, ReturnDate=%s]",
+            isbn, patronId, branchId, loanDate, returnDate);
     }
 
 
