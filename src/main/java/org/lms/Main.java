@@ -96,6 +96,47 @@ public class Main {
         logger.info("Effective Java total across all branches: {}", 
                 libraryService.getTotalCopiesAcrossAllBranches(b1.getIsbn()));
 
+        logger.info("=== Branch-Aware Checkout/Return Demo ===");
+        // Branch-aware checkout and return demo
+        logger.info("Checking out 'Effective Java' from Downtown for P1...");
+        boolean branchCheckout = libraryService.checkoutBookAtBranch(b1.getIsbn(), p1.getId(), "BRANCH-001");
+        logger.info("Branch checkout successful: {}", branchCheckout);
+        logger.info("Downtown copies after checkout: {}",
+                libraryService.getBookCountAtBranch("BRANCH-001", b1.getIsbn()));
+
+        logger.info("Returning 'Effective Java' to Downtown from P1...");
+        boolean branchReturn = libraryService.returnBookAtBranch(b1.getIsbn(), "BRANCH-001");
+        logger.info("Branch return successful: {}", branchReturn);
+        logger.info("Downtown copies after return: {}",
+                libraryService.getBookCountAtBranch("BRANCH-001", b1.getIsbn()));
+        logger.info("=== Branch-Aware Checkout/Return Demo complete ===");
+
+        logger.info("=== Branch-Aware Reservation Demo ===");
+                // Branch-aware reservation demo (book checked out at branch, then reserved)
+                logger.info("Checking out 'Effective Java' from Downtown for P1 again...");
+                libraryService.checkoutBookAtBranch(b1.getIsbn(), p1.getId(), "BRANCH-001");
+                boolean p2BranchCheckout = libraryService.checkoutBookAtBranch(b1.getIsbn(), p2.getId(), "BRANCH-001");
+                if (!p2BranchCheckout) {
+                        logger.info("Branch checkout unavailable, reserving for P2 at Downtown");
+                        libraryService.reserveBook(b1.getIsbn(), new BookObserver() {
+                                @Override
+                                public void onBookAvailable(Book book) {
+                                        logger.info("P2 notified: Book now available at Downtown: {}", book);
+                                        boolean checkedOut = libraryService.checkoutBookAtBranch(book.getIsbn(), p2.getId(), "BRANCH-001");
+                                        logger.info("P2 branch checkout success: {}", checkedOut);
+                                }
+                        });
+                }
+                libraryService.returnBookAtBranch(b1.getIsbn(), "BRANCH-001");
+                logger.info("=== Branch-Aware Reservation Demo complete ===");
+
+                logger.info("=== Branch Negative Case Demo ===");
+                // Negative case: checkout when no copies are available at branch
+                logger.info("Attempting to checkout 'Java Concurrency in Practice' from Westside (no copies)...");
+                boolean noCopiesCheckout = libraryService.checkoutBookAtBranch(b3.getIsbn(), p1.getId(), "BRANCH-003");
+                logger.info("Branch checkout success (expected false): {}", noCopiesCheckout);
+                logger.info("=== Branch Negative Case Demo complete ===");
+
         // Find branches with a specific book
         logger.info("Branches with 'Head First Java': {}", 
                 libraryService.findBranchesWithBook(b2.getIsbn()));

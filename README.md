@@ -311,6 +311,7 @@ classDiagram
 | Feature | Description | Benefit |
 |---------|-------------|---------|
 | 🏢 **Multi-Branch Support** | Manage multiple library locations independently | Scalable architecture |
+| 🧭 **Branch-Aware Lending** | Checkout/return from a specific branch with per-branch inventory | Accurate availability |
 | 🚚 **Book Transfers** | Transfer books between branches with audit trail | Inventory optimization |
 | 📈 **Branch Analytics** | Track book distribution and availability by location | Data-driven decisions |
 | 🔔 **Reservation System** | Queue for unavailable books with auto-notifications | Enhanced user experience |
@@ -324,63 +325,73 @@ classDiagram
 
 ```java
 // Initialize library
-LibraryService library = LibraryFactory.createLibrary();
+LibraryService library = new LibraryService();
 
 // Add books to catalog
-library.addBook("978-0-13-468599-1", "Effective Java", "Joshua Bloch", 2018);
-library.addBook("978-0-596-52068-7", "Design Patterns", "Gang of Four", 1994);
+Book book1 = LibraryFactory.createBook("978-0134685991", "Effective Java", "Joshua Bloch", 2018);
+Book book2 = LibraryFactory.createBook("978-0201633610", "Design Patterns", "Gang of Four", 1994);
+library.addBook(book1);
+library.addBook(book2);
 
 // Register patron
-library.addPatron(1, "Alice Johnson");
+Patron patron = LibraryFactory.createPatron("p1", "Alice Johnson", "alice@example.com");
+library.addPatron(patron);
 
 // Checkout book
-library.checkoutBook("978-0-13-468599-1", 1);
+library.checkoutBook(book1.getIsbn(), patron.getId());
 
 // Search books
-List<Book> javaBooks = library.searchByTitle("Java");
+List<Book> javaBooks = library.findByTitle("Java");
 ```
 
 ### Multi-Branch Operations
 
 ```java
 // Create branches
-library.createBranch("BR001", "Central Library", "123 Main St", "555-0100");
-library.createBranch("BR002", "East Branch", "456 Oak Ave", "555-0200");
+Branch central = LibraryFactory.createBranch("BR001", "Central Library", "123 Main St", "555-0100");
+Branch east = LibraryFactory.createBranch("BR002", "East Branch", "456 Oak Ave", "555-0200");
+library.addBranch(central);
+library.addBranch(east);
 
 // Add books to specific branches
-library.addBookToBranch("BR001", "978-0-13-468599-1", 5);  // 5 copies at Central
-library.addBookToBranch("BR002", "978-0-13-468599-1", 3);  // 3 copies at East
+library.addBookToBranch("BR001", book1.getIsbn(), 5);  // 5 copies at Central
+library.addBookToBranch("BR002", book1.getIsbn(), 3);  // 3 copies at East
 
 // Transfer books between branches
-library.transferBook("BR001", "BR002", "978-0-13-468599-1", 2, 
-                     "Meeting increased demand");
+library.transferBook(book1.getIsbn(), "BR001", "BR002")
+    .ifPresent(transferId -> System.out.println("Transfer ID: " + transferId));
 
 // Check availability at specific branch
-int available = library.getBookAvailability("BR001", "978-0-13-468599-1");
+int available = library.getBookCountAtBranch("BR001", book1.getIsbn());
 
 // View all branches
-library.listAllBranches();
+library.getAllBranches();
+
+// Branch-aware checkout and return
+library.checkoutBookAtBranch(book1.getIsbn(), patron.getId(), "BR001");
+library.returnBookAtBranch(book1.getIsbn(), "BR001");
 ```
 
 ### Reservation System
 
 ```java
 // Reserve a book when unavailable
-library.reserveBook("978-0-13-468599-1", 2);  // Patron 2 reserves
+library.reserveBook(book1.getIsbn(), new BookObserver() {
+    @Override
+    public void onBookAvailable(Book book) {
+        System.out.println("Notified: " + book);
+    }
+});
 
 // Observer automatically notifies when book becomes available
-library.returnBook("978-0-13-468599-1", 1);  
-// -> Notification sent to Patron 2
-
-// View patron's reservations
-library.listPatronReservations(2);
+library.returnBook(book1.getIsbn());
 ```
 
 ### Recommendation Engine
 
 ```java
 // Get personalized recommendations
-List<Book> recommended = library.getRecommendations(1);
+List<Book> recommended = library.recommendedBooks(patron.getId());
 // Returns books similar to patron's borrowing history
 ```
 

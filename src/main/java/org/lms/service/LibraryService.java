@@ -116,8 +116,56 @@ public class LibraryService {
         return success;
     }
 
+    /**
+     * Checkout a book from a specific branch.
+     */
+    public boolean checkoutBookAtBranch(String isbn, String patronId, String branchId) {
+        if (!patronManager.hasPatron(patronId)) {
+            log.warn("Branch checkout failed: Patron not found - {}", patronId);
+            return false;
+        }
+        if (branchManager.findBranchById(branchId).isEmpty()) {
+            log.warn("Branch checkout failed: Branch not found - {}", branchId);
+            return false;
+        }
+        if (!inventoryManager.hasBook(isbn)) {
+            log.warn("Branch checkout failed: Book not found - {}", isbn);
+            return false;
+        }
+
+        boolean removed = branchManager.removeBookFromBranch(branchId, isbn, 1);
+        if (!removed) {
+            log.warn("Branch checkout failed: No available copies - {} at {}", isbn, branchId);
+            return false;
+        }
+
+        boolean success = loanManager.checkoutBookAtBranch(isbn, patronId, branchId);
+        if (!success) {
+            branchManager.addBookToBranch(branchId, isbn, 1);
+            return false;
+        }
+
+        patronManager.recordBorrow(patronId, isbn);
+        return true;
+    }
+
     public boolean returnBook(String isbn) {
         return loanManager.returnBook(isbn);
+    }
+
+    /**
+     * Return a book to a specific branch.
+     */
+    public boolean returnBookAtBranch(String isbn, String branchId) {
+        boolean success = loanManager.returnBookAtBranch(isbn, branchId);
+        if (success) {
+            if (branchManager.findBranchById(branchId).isPresent() && inventoryManager.hasBook(isbn)) {
+                branchManager.addBookToBranch(branchId, isbn, 1);
+            } else {
+                log.warn("Branch return completed but inventory not updated: ISBN={} BranchID={}", isbn, branchId);
+            }
+        }
+        return success;
     }
 
     public boolean isAvailable(String isbn) {
@@ -133,6 +181,10 @@ public class LibraryService {
     public void reserveBook(String isbn, BookObserver observer) {
         if (!inventoryManager.hasBook(isbn)) {
             log.warn("Reservation failed: Book not found - {}", isbn);
+            return;
+        }
+        if (loanManager.isAvailable(isbn)) {
+            log.info("Reservation skipped: Book is currently available - {}", isbn);
             return;
         }
         reservationManager.reserveBook(isbn, observer);
